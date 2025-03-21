@@ -38,6 +38,10 @@ namespace Sharpmad
             string argUsername = "";
             string argPassword = "";
             string argSOASerialNumber = "-1";
+            string argRealm = "";
+            string argHash = "";
+            string argSecurity = "Secure";
+            string argDNSName = "";
             int preference = 0;
             int priority = 0;
             int weight = 0;
@@ -52,6 +56,9 @@ namespace Sharpmad
             bool argStatic = false;
             bool argTombstone = false;
             bool argVerbose = false;
+            bool argDNS = false;
+            bool argRecordCheck = false;
+            bool argTcpClientAuth = false;
 
             if (args.Length > 0)
             {
@@ -67,6 +74,10 @@ namespace Sharpmad
                         argMAQ = true;
                         break;
 
+                    case "DNS":
+                        argDNS = true;
+                        break;
+
                 }
 
                 foreach (var entry in args.Select((value, index) => new { index, value }))
@@ -74,7 +85,7 @@ namespace Sharpmad
                     string argument = entry.value.ToUpper();
 
                     switch (argument)
-                    {      
+                    {
 
                         case "-ACCESS":
                         case "/ACCESS":
@@ -235,10 +246,42 @@ namespace Sharpmad
                         case "/PASSWORD":
                             argPassword = args[entry.index + 1];
                             break;
-                            
+
                         case "-VALUE":
                         case "/VALUE":
                             argValue = args[entry.index + 1];
+                            break;
+
+                        case "-REALM":
+                        case "/REALM":
+                            argRealm = args[entry.index + 1];
+                            break;
+
+                        case "-HASH":
+                        case "/HASH":
+                            argHash = args[entry.index + 1];
+                            break;
+
+                        case "-SECURITY":
+                        case "/SECURITY":
+                            argSecurity = args[entry.index + 1];
+                            break;
+
+                        case "-DNSNAME":
+                        case "/DNSNAME":
+                            argDNSName = args[entry.index + 1];
+                            break;
+
+                        case "-RECORDCHECK":
+                        case "-CHECK":
+                        case "/RECORDCHECK":
+                        case "/CHECK":
+                            argRecordCheck = true;
+                            break;
+
+                        case "-TCPCLIENTAUTH":
+                        case "/TCPCLIENTAUTH":
+                            argTcpClientAuth = true;
                             break;
 
                         case "-?":
@@ -257,6 +300,10 @@ namespace Sharpmad
                                 {
                                     Util.GetHelp("MAQ");
                                 }
+                                else if (help.Equals("DNS"))
+                                {
+                                    Util.GetHelp("DNS");
+                                }
                                 else
                                 {
                                     Util.GetHelp("HELP");
@@ -272,7 +319,10 @@ namespace Sharpmad
 
                         default:
                             if (argument.StartsWith("-") || argument.StartsWith("/"))
-                                throw new ArgumentException(paramName: argument, message: "Invalid Parameter");
+                            {
+                                Console.WriteLine("[!] Invalid parameter: " + argument);
+                                return;
+                            }
                             break;
 
                     }
@@ -285,19 +335,19 @@ namespace Sharpmad
             string[] recordTypes = { "A", "AAAA", "CNAME", "DNAME", "MX", "NS", "PTR", "SRV", "TXT" };
             string[] containers = { "BUILTIN", "COMPUTERS", "DOMAINCONTROLLERS", "FOREIGNSECURITYPRINCIPALS", "KEYS", "LOSTANDFOUND", "MANAGEDSERVICEACCOUNTS", "PROGRAMDATA", "USERS", "ROOT" };
 
-            if (argADIDNS && (String.Equals(argAction, "ADDACE") || String.Equals(argAction, "REMOVEACE")) && !accessTypes.Any(argAccess.Contains)) throw new ArgumentException("Access value must be CreateChild, Delete, DeleteChild, DeleteTree, ExtendedRight, GenericAll, GenericExecute, GenericRead, GenericWrite, ListChildren, ListObject, ReadControl, ReadProperty, Self, Synchronize, WriteDacl, WriteOwner, or WriteProperty");
-            if (argMAQ && !containers.Any(argContainer.Contains)) throw new ArgumentException("Container value must be BUILTIN, COMPUTERS, DOMAINCONTROLLERS, FOREIGNSECURITYPRINCIPALS, KEYS, LOSTANDFOUND, MANAGEDSERVICEACCOUNTS, PROGRAMDATA, or USERS");
-            try { preference = Int32.Parse(argPreference); } catch { throw new ArgumentException("Preference value must be an integer"); }
-            try { priority = Int32.Parse(argPriority); } catch { throw new ArgumentException("Priority value must be an integer"); }
-            try { weight = Int32.Parse(argWeight); } catch { throw new ArgumentException("Weight value must be an integer"); }
-            try { port = Int32.Parse(argPort); } catch { throw new ArgumentException("Port value must be an integer"); }
-            try { ttl = Int32.Parse(argTTL); } catch { throw new ArgumentException("TTL value must be an integer"); }
-            try { soaSerialNumber = Int32.Parse(argSOASerialNumber); } catch { throw new ArgumentException("SOASerialNumber value must be an integer"); }
-            if((argADIDNS && (!String.Equals(argAction, "ADDACE") && !String.Equals(argAction, "GETDACL") && !String.Equals(argAction, "GETZONE"))) && String.IsNullOrEmpty(argNode)) throw new ArgumentException("-Node needed");
-            if ((argADIDNS && String.Equals(argAction, "ADDACE")) && String.IsNullOrEmpty(argPrincipal)) throw new ArgumentException("-Principal needed");
-            if ((argADIDNS && String.Equals(argAction, "RENAME")) && String.IsNullOrEmpty(argNodeNew)) throw new ArgumentException("-NodeNew needed");
-            if ((argMAQ && !String.Equals(argAction, "GETCREATOR")) && String.IsNullOrEmpty(argMachineAccount)) throw new ArgumentException("-MachineAccount needed");
-            if (String.Equals(argAction, "GETATTRIBUTE") || String.Equals(argAction, "SETATTRIBUTE") && String.IsNullOrEmpty(argAttribute)) throw new ArgumentException("-Attribute needed");
+            if (argADIDNS && (String.Equals(argAction, "ADDACE") || String.Equals(argAction, "REMOVEACE")) && !accessTypes.Any(argAccess.Contains)) { Console.WriteLine("[!] Access value must be CreateChild, Delete, DeleteChild, DeleteTree, ExtendedRight, GenericAll, GenericExecute, GenericRead, GenericWrite, ListChildren, ListObject, ReadControl, ReadProperty, Self, Synchronize, WriteDacl, WriteOwner, or WriteProperty"); return; }
+            if (argMAQ && !containers.Any(argContainer.Contains)) { Console.WriteLine("[!] Container value must be BUILTIN, COMPUTERS, DOMAINCONTROLLERS, FOREIGNSECURITYPRINCIPALS, KEYS, LOSTANDFOUND, MANAGEDSERVICEACCOUNTS, PROGRAMDATA, or USERS"); return; }
+            try { preference = Int32.Parse(argPreference); } catch { Console.WriteLine("[!] Preference value must be an integer"); return; }
+            try { priority = Int32.Parse(argPriority); } catch { Console.WriteLine("[!] Priority value must be an integer"); return; }
+            try { weight = Int32.Parse(argWeight); } catch { Console.WriteLine("[!] Weight value must be an integer"); return; }
+            try { port = Int32.Parse(argPort); } catch { Console.WriteLine("[!] Port value must be an integer"); return; }
+            try { ttl = Int32.Parse(argTTL); } catch { Console.WriteLine("[!] TTL value must be an integer"); return; }
+            try { soaSerialNumber = Int32.Parse(argSOASerialNumber); } catch { Console.WriteLine("[!] SOASerialNumber value must be an integer"); return; }
+            if ((argADIDNS && (!String.Equals(argAction, "ADDACE") && !String.Equals(argAction, "GETDACL") && !String.Equals(argAction, "GETZONE"))) && String.IsNullOrEmpty(argNode)) { Console.WriteLine("[!] -Node needed"); return; }
+            if ((argADIDNS && String.Equals(argAction, "ADDACE")) && String.IsNullOrEmpty(argPrincipal)) { Console.WriteLine("[!] -Principal needed"); return; }
+            if ((argADIDNS && String.Equals(argAction, "RENAME")) && String.IsNullOrEmpty(argNodeNew)) { Console.WriteLine("[!] -NodeNew needed"); return; }
+            if ((argMAQ && !String.Equals(argAction, "GETCREATOR")) && String.IsNullOrEmpty(argMachineAccount)) { Console.WriteLine("[!] -MachineAccount needed"); return; }
+            if (String.Equals(argAction, "GETATTRIBUTE") || String.Equals(argAction, "SETATTRIBUTE") && String.IsNullOrEmpty(argAttribute)) { Console.WriteLine("[!] -Attribute needed"); return;  }
             string credentialDomain = "";
             string credentialUsername = "";
 
@@ -361,7 +411,7 @@ namespace Sharpmad
                 catch
                 {
                     Console.WriteLine("[!] System is not domain attached, define arguments manually");
-                    Environment.Exit(1);
+                    return;
                 }
 
             }
@@ -483,11 +533,25 @@ namespace Sharpmad
                     }
 
                 }
+                else if (argDNS)
+                {
+                    switch (argAction)
+                    {
+                        case "NEW":
+                            DNS.InvokeDnsUpdate(argDomainController, argRealm, argUsername, argPassword, argHash, argZone, ttl, preference, priority, weight, port, argSecurity, argType, argDNSName, argData, argRecordCheck, argTcpClientAuth);
+                            break;
+                        case "CHECK":
+                            argRecordCheck = true;
+                            DNS.InvokeDnsUpdate(argDomainController, argRealm, argUsername, argPassword, argHash, argZone, ttl, preference, priority, weight, port, argSecurity, argType, argDNSName, argData, argRecordCheck, argTcpClientAuth);
+                            break;
+                    }
+                }
 
             }
             catch
             {
-                Environment.Exit(1);
+                Console.WriteLine("[!] Errors occured. Exiting...");
+                return;
             }
 
         }
